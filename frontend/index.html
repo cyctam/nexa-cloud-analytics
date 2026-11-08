@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NusaCommerce Analytics Dashboard</title>
+  <title>NEXA | Cloud Analytics</title>
 
   <!-- DaisyUI + Tailwind CSS CDN -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" />
@@ -78,14 +78,14 @@
         <i data-lucide="menu" class="w-5 h-5"></i>
       </label>
       <div class="flex-1">
-        <span class="font-bold text-lg text-primary">NusaCommerce</span>
+        <span class="font-bold text-lg text-primary">NEXA</span>
         <span class="text-base-content/50 text-sm ml-2 hidden sm:inline">Analytics Dashboard</span>
       </div>
       <div class="flex items-center gap-2">
         <!-- Connection status badge -->
-        <div id="conn-badge" class="badge badge-ghost gap-1 text-xs">
-          <span class="w-2 h-2 rounded-full bg-base-300 inline-block"></span>
-          Not connected
+        <div id="conn-badge" class="badge badge-info gap-1 text-xs">
+          <span class="w-2 h-2 rounded-full bg-info-content inline-block"></span>
+          Demo Mode
         </div>
         <button onclick="document.getElementById('config-modal').showModal()"
           class="btn btn-sm btn-outline btn-primary gap-1">
@@ -117,6 +117,11 @@
           <span id="last-updated" class="text-xs text-base-content/50"></span>
         </div>
 
+        <div class="alert alert-info mb-4 text-sm">
+          <i data-lucide="info" class="w-4 h-4 shrink-0"></i>
+          <span><strong>Demo Mode</strong> · Dashboard data is a static snapshot. The workflow walkthrough does not invoke AWS services.</span>
+        </div>
+
         <!-- KPI Cards -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div class="stat bg-base-100 rounded-2xl shadow stat-card">
@@ -141,7 +146,7 @@
             </div>
             <div class="stat-title text-xs">Active Users</div>
             <div class="stat-value text-accent text-2xl" id="kpi-users">â€”</div>
-            <div class="stat-desc">Real-time (DynamoDB)</div>
+            <div class="stat-desc" id="kpi-users-sub">Unique users in dataset</div>
           </div>
           <div class="stat bg-base-100 rounded-2xl shadow stat-card">
             <div class="stat-figure text-success">
@@ -229,7 +234,7 @@
               </tr>
             </thead>
             <tbody id="sellers-tbody">
-              <tr><td colspan="9" class="text-center text-base-content/50 py-8">No data â€” configure API first</td></tr>
+              <tr><td colspan="9" class="text-center text-base-content/50 py-8">Loading demo data...</td></tr>
             </tbody>
           </table>
         </div>
@@ -254,7 +259,7 @@
               </tr>
             </thead>
             <tbody id="users-tbody">
-              <tr><td colspan="6" class="text-center text-base-content/50 py-8">No data â€” configure API first</td></tr>
+              <tr><td colspan="6" class="text-center text-base-content/50 py-8">Loading demo data...</td></tr>
             </tbody>
           </table>
         </div>
@@ -360,7 +365,7 @@
 
     <!-- FOOTER -->
     <footer class="footer footer-center p-4 bg-base-100 text-base-content/50 text-xs border-t border-base-200">
-      <p>NusaCommerce Analytics Platform Â· LKS National Competition 2026 Â· Cloud Computing</p>
+      <p>NEXA Â· Cloud Data &amp; Analytics Platform</p>
     </footer>
   </div>
 
@@ -373,7 +378,7 @@
           <i data-lucide="database-zap" class="w-5 h-5"></i>
         </div>
         <div>
-          <div class="font-bold text-sm leading-tight">NusaCommerce</div>
+          <div class="font-bold text-sm leading-tight">NEXA</div>
           <div class="text-xs opacity-70">Analytics Platform</div>
         </div>
       </div>
@@ -432,7 +437,7 @@
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CONFIG
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-const CFG_KEY = 'nusa_dashboard_config';
+const CFG_KEY = 'nexa_dashboard_config';
 let config = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
 let charts = {};
 
@@ -471,8 +476,10 @@ async function apiFetch(path, params = {}) {
 // REFRESH ALL
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function refreshAll() {
-  // Skip requests if API URL is not configured
-  if (!config.apiUrl) { return; }
+  if (!config.apiUrl) {
+    await loadDemoData();
+    return;
+  }
   const icon = document.getElementById('refresh-icon');
   icon.classList.add('animate-spin');
   try {
@@ -491,6 +498,40 @@ async function refreshAll() {
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// STATIC DEMO MODE — embedded snapshot; this page needs no separate data file or AWS call.
+const DEMO_DATA = {"meta":{"mode":"static-demo","generated_at":"2026-11-07T20:54:45Z","date_range":{"start":"2024-01-01","end":"2024-12-31"},"source_rows":{"transactions":100000,"user_events":200000,"sellers":5000},"note":"Dashboard metrics are precomputed from the included sample CSV datasets. Pipeline execution in demo mode is visual-only."},"kpis":{"gmv":1032384569233.41,"order_count":74962,"active_users":29963,"status":"demo"},"sales":[{"dimension":"Sports","gmv":105255137717.88},{"dimension":"Food & Beverage","gmv":104924246223.95},{"dimension":"Home & Living","gmv":103751294395.95},{"dimension":"Health & Beauty","gmv":103473739152.55},{"dimension":"Toys & Games","gmv":103255633755.09},{"dimension":"Fashion","gmv":102692145804.03},{"dimension":"Automotive","gmv":102509074568.05},{"dimension":"Books & Stationery","gmv":102371267501.96},{"dimension":"Baby & Kids","gmv":102369842719.17},{"dimension":"Electronics","gmv":101782187394.78}],"payments":[{"method":"TRANSFER","count":18883},{"method":"COD","count":18777},{"method":"CREDIT_CARD","count":18746},{"method":"EWALLET","count":18556}],"funnel":{"page_views":110245,"add_to_cart":49712,"checkouts":24060,"purchases":15983},"seller_recommendations":[{"seller_id":"566ddfee-6b33-4020-a226-b207738d8442","seller_name":"Toko_00213","tier":"BRONZE","composite_score":0.7743,"gmv_score":0.5395,"completion_score":0.8651,"rating_score":0.995,"growth_score":1.0,"segment_label":"TOP"},{"seller_id":"afc75d76-ee47-4ad1-a747-e57db7e400c3","seller_name":"Toko_01098","tier":"GOLD","composite_score":0.7326,"gmv_score":0.6551,"completion_score":0.7821,"rating_score":0.68,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"47a1b752-ee8c-4d14-9b8c-2ee6b09f1697","seller_name":"Toko_04921","tier":"SILVER","composite_score":0.7308,"gmv_score":0.5125,"completion_score":0.9325,"rating_score":0.73,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"6385d277-ec34-4f44-bfe1-617ee24885bf","seller_name":"Toko_04448","tier":"SILVER","composite_score":0.7221,"gmv_score":0.5251,"completion_score":0.9167,"rating_score":0.685,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"058932f2-d477-4c36-8bcb-14572c957bde","seller_name":"Toko_03870","tier":"SILVER","composite_score":0.7204,"gmv_score":0.7352,"completion_score":0.7377,"rating_score":0.905,"growth_score":0.2407,"segment_label":"GROWING"},{"seller_id":"27c88d38-a338-46ea-902e-adf9c89570ff","seller_name":"Toko_02853","tier":"SILVER","composite_score":0.7191,"gmv_score":0.7923,"completion_score":0.6852,"rating_score":0.94,"growth_score":0.0863,"segment_label":"GROWING"},{"seller_id":"f2a0d9bb-c462-4478-8882-2c4a4e62d5e9","seller_name":"Toko_02194","tier":"BRONZE","composite_score":0.7101,"gmv_score":0.5169,"completion_score":0.7344,"rating_score":0.915,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"5c8734b2-2dd9-47a2-8e83-8f8596895f4f","seller_name":"Toko_04630","tier":"BRONZE","composite_score":0.7085,"gmv_score":0.7513,"completion_score":0.8509,"rating_score":0.285,"growth_score":0.9569,"segment_label":"GROWING"},{"seller_id":"dca9cdd8-7190-4120-b0a4-a629f067f080","seller_name":"Toko_04463","tier":"BRONZE","composite_score":0.7013,"gmv_score":0.5726,"completion_score":0.8152,"rating_score":0.8,"growth_score":0.6768,"segment_label":"GROWING"},{"seller_id":"fe94e8d9-e1fc-43fd-8e20-679a4a45256b","seller_name":"Toko_00600","tier":"BRONZE","composite_score":0.6946,"gmv_score":0.4064,"completion_score":0.8867,"rating_score":0.83,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"bcc6c738-82b3-437e-a842-33182eb24e7d","seller_name":"Toko_02357","tier":"BRONZE","composite_score":0.6914,"gmv_score":0.78,"completion_score":0.9494,"rating_score":0.405,"growth_score":0.1363,"segment_label":"GROWING"},{"seller_id":"0bcf04ec-189e-45d9-9ef6-f59ff2ae0f13","seller_name":"Toko_03927","tier":"BRONZE","composite_score":0.6905,"gmv_score":0.5897,"completion_score":0.8046,"rating_score":0.875,"growth_score":0.382,"segment_label":"GROWING"},{"seller_id":"23f78bef-e014-4de5-8949-3c1edde76af2","seller_name":"Toko_03692","tier":"BRONZE","composite_score":0.6856,"gmv_score":0.5142,"completion_score":0.6964,"rating_score":0.855,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"d8cee47d-759f-475e-8d0f-fadaebee7395","seller_name":"Toko_04285","tier":"SILVER","composite_score":0.6843,"gmv_score":0.6483,"completion_score":0.6566,"rating_score":0.64,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"67176e66-33b9-4991-914f-2a08129bf019","seller_name":"Toko_00434","tier":"PLATINUM","composite_score":0.6817,"gmv_score":0.3793,"completion_score":0.8867,"rating_score":0.82,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"8717d88e-75ab-49a9-9e6f-056e57c3a948","seller_name":"Toko_02044","tier":"PLATINUM","composite_score":0.6796,"gmv_score":0.6477,"completion_score":0.7018,"rating_score":0.935,"growth_score":0.2298,"segment_label":"GROWING"},{"seller_id":"f9eb56fc-1544-4ce9-bb0b-1ac6b47118a7","seller_name":"Toko_04266","tier":"GOLD","composite_score":0.6763,"gmv_score":0.3762,"completion_score":0.8426,"rating_score":0.865,"growth_score":1.0,"segment_label":"GROWING"},{"seller_id":"f72e9409-91d6-46f9-bb44-e3fd8f22f362","seller_name":"Toko_01723","tier":"BRONZE","composite_score":0.6756,"gmv_score":0.4353,"completion_score":0.9056,"rating_score":0.725,"growth_score":0.8487,"segment_label":"GROWING"},{"seller_id":"85ebb467-40c0-4522-b682-649897a4fbe7","seller_name":"Toko_04115","tier":"GOLD","composite_score":0.6729,"gmv_score":0.7314,"completion_score":0.7976,"rating_score":0.695,"growth_score":0.0209,"segment_label":"GROWING"},{"seller_id":"bc94f7fc-58c6-44e1-895f-c6ee1878877a","seller_name":"Toko_03981","tier":"BRONZE","composite_score":0.6726,"gmv_score":0.3519,"completion_score":0.7763,"rating_score":0.995,"growth_score":1.0,"segment_label":"GROWING"}],"seller_summary":[{"segment_label":"AT_RISK","count":349},{"segment_label":"GROWING","count":705},{"segment_label":"STABLE","count":3945},{"segment_label":"TOP","count":1}],"user_recommendations":[{"user_id":"abd9111e-307c-4df7-9141-9ecf386606b1","recency_days":0,"frequency":7,"monetary":135106258.65000004,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"c112b40d-8f03-477e-97b2-44d6e8b2002c","recency_days":24,"frequency":5,"monetary":128491626.51,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"b4ce8c64-1673-46f3-b2c2-62d79ec80a29","recency_days":30,"frequency":5,"monetary":127032581.63999999,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"b64fbf9d-9dde-4177-8656-dc3f8d260b40","recency_days":40,"frequency":4,"monetary":127555874.84,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"4f98ff57-0cc1-4c0f-a1ce-303e24af529e","recency_days":5,"frequency":5,"monetary":101331284.77000001,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"3a3c488a-3a58-4d20-a64a-fa49a466a280","recency_days":12,"frequency":5,"monetary":101641978.75,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"981175d5-cd29-42b5-9dfb-83da18c135de","recency_days":1,"frequency":6,"monetary":76494351.06,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"fe8ffde0-944f-4039-8e39-6ad770667e0a","recency_days":5,"frequency":4,"monetary":110384760.70000002,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"3c8bf3ab-1c20-4187-94ae-266a407eccd9","recency_days":8,"frequency":4,"monetary":110997311.94999999,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"b51a5dca-3783-4e77-b51d-7bedf32bc359","recency_days":17,"frequency":5,"monetary":93623938.20000002,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"5ba91800-868a-416a-b212-357232746ea8","recency_days":15,"frequency":4,"monetary":108802857.36,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"94bd4b79-979f-4a08-a343-9b33ae56128b","recency_days":20,"frequency":6,"monetary":74015625.04,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"7c7c028b-e892-4259-9699-222b7f468f01","recency_days":37,"frequency":4,"monetary":113269971.00999999,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"8e139d7c-d202-42d2-8141-a1f68a21d073","recency_days":0,"frequency":4,"monetary":104774603.17000002,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"29eded06-ff8f-4dbd-b4df-eb70924ffbe5","recency_days":11,"frequency":5,"monetary":89135205.05000001,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"f94292f4-8346-4600-a405-2884bd053baf","recency_days":31,"frequency":4,"monetary":109354933.08,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"84ffeb6a-11ce-4d67-8cbd-75591894aace","recency_days":22,"frequency":4,"monetary":106887364.94999999,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"69854de1-6c16-4898-a71b-08169e3bc956","recency_days":12,"frequency":5,"monetary":86835915.63,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"0a0a8972-fdd5-45af-a2cf-e4397fe3f088","recency_days":29,"frequency":4,"monetary":108388028.75,"cluster_id":0,"segment_label":"CHAMPION"},{"user_id":"4c2bbbba-0d12-4337-a004-9038836c11b7","recency_days":0,"frequency":5,"monetary":81493969.55,"cluster_id":0,"segment_label":"CHAMPION"}],"user_summary":[{"segment_label":"AT_RISK","count":4872},{"segment_label":"CHAMPION","count":4872},{"segment_label":"DORMANT","count":4871},{"segment_label":"LOYAL","count":4872}]};
+
+async function loadDemoData() {
+  try {
+    const data = DEMO_DATA;
+    setDemoBadge();
+    document.getElementById('kpi-gmv').textContent = formatIDR(data.kpis.gmv);
+    document.getElementById('kpi-gmv-sub').textContent = `Dataset through ${data.meta.date_range.end}`;
+    document.getElementById('kpi-orders').textContent = fmtNum(data.kpis.order_count);
+    document.getElementById('kpi-users').textContent = fmtNum(data.kpis.active_users);
+    document.getElementById('kpi-users-sub').textContent = 'Unique users in sample events';
+    document.getElementById('kpi-status').textContent = 'DEMO';
+    document.getElementById('kpi-status-sub').textContent = 'Static dataset';
+    renderSalesChart(data.sales || []);
+    renderPaymentChart(data.payments || []);
+    renderFunnelChart(data.funnel || {});
+    renderSellersTable(data.seller_recommendations || []);
+    renderSellerSegChart(data.seller_summary || []);
+    renderUsersTable(data.user_recommendations || []);
+    renderUserSegChart(data.user_summary || []);
+    document.getElementById('last-updated').textContent = `Demo data · ${new Date(data.meta.generated_at).toLocaleDateString()}`;
+  } catch (error) {
+    setDemoBadge(false);
+    toast(error.message, 'error');
+  }
+}
+
+function setDemoBadge(available = true) {
+  const badge = document.getElementById('conn-badge');
+  badge.className = `badge gap-1 text-xs ${available ? 'badge-info' : 'badge-error'}`;
+  badge.innerHTML = `<span class="w-2 h-2 rounded-full ${available ? 'bg-info-content' : 'bg-error-content'} inline-block"></span>${available ? 'Demo Mode' : 'Demo data unavailable'}`;
+}
+
 // HEALTH CHECK
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function fetchHealth() {
@@ -525,6 +566,7 @@ async function fetchRealtime() {
     document.getElementById('kpi-gmv-sub').textContent = `Hour ${data.hour || 'â€”'}`;
     document.getElementById('kpi-orders').textContent  = fmtNum(data.order_count || 0);
     document.getElementById('kpi-users').textContent   = fmtNum(data.active_users || 0);
+    document.getElementById('kpi-users-sub').textContent = 'Real-time (DynamoDB)';
   } catch(e) {
     ['kpi-gmv','kpi-orders','kpi-users'].forEach(id =>
       document.getElementById(id).textContent = 'â€”');
@@ -571,9 +613,9 @@ function renderSalesChart(results) {
 }
 
 function renderPaymentChart(results) {
-  // Mock payment distribution if not in results
-  const labels = ['EWALLET', 'TRANSFER', 'COD', 'CREDIT_CARD'];
-  const values = [42, 28, 18, 12];
+  const paymentRows = (results || []).filter(r => r.method && Number.isFinite(Number(r.count)));
+  const labels = paymentRows.map(r => r.method);
+  const values = paymentRows.map(r => Number(r.count || 0));
   renderChart('chart-payment', 'doughnut', labels, [{
     data: values,
     backgroundColor: ['#6366f1','#22d3ee','#f59e0b','#10b981'],
@@ -807,7 +849,7 @@ async function testEndpoint(path) {
 
 function toggleTheme(el) {
   document.documentElement.setAttribute('data-theme', el.checked ? 'dark' : 'light');
-  localStorage.setItem('nusa_theme', el.checked ? 'dark' : 'light');
+  localStorage.setItem('nexa_theme', el.checked ? 'dark' : 'light');
 }
 
 function toast(msg, type = 'info') {
@@ -886,10 +928,13 @@ function resetPipeline() {
 }
 
 async function simulatePipeline() {
-  if (!config.apiUrl) { toast('Configure API first', 'error'); return; }
   if (pipelineRunning) return;
-  pipelineRunning = true;
+  if (!config.apiUrl) {
+    await runDemoPipeline();
+    return;
+  }
   resetPipeline();
+  pipelineRunning = true;
   document.getElementById('pipeline-log').innerHTML = '';
   document.getElementById('btn-run-pipeline').disabled = true;
   const statusEl = document.getElementById('pipeline-status-text');
@@ -919,6 +964,54 @@ async function simulatePipeline() {
     statusEl.className = 'text-xs text-error font-bold';
     document.getElementById('btn-run-pipeline').disabled = false;
     pipelineRunning = false;
+  }
+}
+
+async function runDemoPipeline() {
+  resetPipeline();
+  pipelineRunning = true;
+  document.getElementById('pipeline-log').innerHTML = '';
+  document.getElementById('btn-run-pipeline').disabled = true;
+  const status = document.getElementById('pipeline-status-text');
+  status.textContent = 'DEMO RUN';
+  status.className = 'text-xs text-info font-bold';
+  pipelineLog('Starting visual pipeline walkthrough. No AWS resources are invoked.', 'info');
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const step = async (id, label) => {
+    setNodeState(id, 'running');
+    pipelineLog(`${label}: running`, 'warn');
+    await wait(550);
+    setNodeState(id, 'success');
+    pipelineLog(`${label}: complete`, 'success');
+  };
+  try {
+    await step('pn-validate', 'ValidateInput');
+    ['pn-etl-txn','pn-etl-ship','pn-etl-sell'].forEach(id => setNodeState(id, 'running'));
+    setParentState('pn-parallel-etl', 'running');
+    pipelineLog('Parallel ETL: processing transactions, shipments, and sellers', 'info');
+    await wait(700);
+    ['pn-etl-txn','pn-etl-ship','pn-etl-sell'].forEach(id => setNodeState(id, 'success'));
+    setParentState('pn-parallel-etl', 'success');
+    pipelineLog('Parallel ETL: complete', 'success');
+    await step('pn-crawler', 'RunCrawler');
+    setParentState('pn-parallel-post', 'running');
+    await Promise.all([
+      (async () => { await step('pn-redshift', 'LoadToRedshift'); await step('pn-refresh', 'RefreshViews'); })(),
+      (async () => { await step('pn-emr-seller', 'SellerScoring'); await step('pn-emr-user', 'UserSegmentation'); })()
+    ]);
+    setParentState('pn-parallel-post', 'success');
+    await step('pn-ml-load', 'LoadMLFeatures');
+    setNodeState('pn-success', 'success');
+    status.textContent = 'DEMO COMPLETED';
+    status.className = 'text-xs text-success font-bold';
+    pipelineLog('Visual walkthrough completed. This did not execute Step Functions or provision AWS resources.', 'success');
+  } catch (error) {
+    status.textContent = 'DEMO ERROR';
+    status.className = 'text-xs text-error font-bold';
+    pipelineLog(error.message, 'error');
+  } finally {
+    pipelineRunning = false;
+    document.getElementById('btn-run-pipeline').disabled = false;
   }
 }
 
@@ -978,22 +1071,15 @@ document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
 
   // Restore theme
-  const savedTheme = localStorage.getItem('nusa_theme') || 'light';
+  const savedTheme = localStorage.getItem('nexa_theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
   document.getElementById('theme-toggle').checked = savedTheme === 'dark';
 
   // Load config form
   loadConfigForm();
 
-  // Auto-open config if not set
-  if (!config.apiUrl) {
-    setTimeout(() => {
-      document.getElementById('config-modal').showModal();
-      toast('Configure your API Gateway URL to get started', 'info');
-    }, 500);
-  } else {
-    refreshAll();
-  }
+  // Load the static portfolio demo by default; API mode is opt-in via Configure.
+  refreshAll();
 
   // Auto-refresh every 60 seconds
   setInterval(refreshAll, 60000);
